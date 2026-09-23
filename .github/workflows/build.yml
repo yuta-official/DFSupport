@@ -1,1 +1,61 @@
+name: Build DFSupport APK
 
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create Flutter project and install DFSupport sources
+        shell: bash
+        run: |
+          set -e
+          flutter create --platforms=android --org com.dfsupport --project-name dfsupport app
+
+          cp main.dart app/lib/main.dart
+          cp pubspec.yaml app/pubspec.yaml
+          cp AndroidManifest.xml app/android/app/src/main/AndroidManifest.xml
+
+          rm -rf app/android/app/src/main/kotlin
+          mkdir -p app/android/app/src/main/kotlin/com/dfsupport/app
+          cp MainActivity.kt app/android/app/src/main/kotlin/com/dfsupport/app/MainActivity.kt
+          cp NotificationStore.kt app/android/app/src/main/kotlin/com/dfsupport/app/NotificationStore.kt
+          cp DFNotificationListener.kt app/android/app/src/main/kotlin/com/dfsupport/app/DFNotificationListener.kt
+
+          sed -i 's/com\.dfsupport\.dfsupport/com.dfsupport.app/g' app/android/app/build.gradle.kts
+
+      - name: Get packages
+        working-directory: app
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze
+
+      - name: Build release APK
+        working-directory: app
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DFSupport-APK
+          path: app/build/app/outputs/flutter-apk/app-release.apk
