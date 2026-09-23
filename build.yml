@@ -1,0 +1,54 @@
+name: Build DFSupport APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create Android project
+        run: |
+          flutter create --platforms=android --org com.dfsupport --project-name dfsupport .
+
+          rm -f android/app/src/main/kotlin/com/dfsupport/dfsupport/MainActivity.kt
+          mkdir -p android/app/src/main/kotlin/com/dfsupport/app
+          cp android_custom/MainActivity.kt android/app/src/main/kotlin/com/dfsupport/app/MainActivity.kt
+          cp android_custom/NotificationStore.kt android/app/src/main/kotlin/com/dfsupport/app/NotificationStore.kt
+          cp android_custom/DFNotificationListener.kt android/app/src/main/kotlin/com/dfsupport/app/DFNotificationListener.kt
+          cp android_custom/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+
+          sed -i 's/com\.dfsupport\.dfsupport/com.dfsupport.app/g' android/app/build.gradle.kts
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DFSupport-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
