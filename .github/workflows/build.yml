@@ -24,6 +24,7 @@ jobs:
           mkdir -p app/android/app/src/main/kotlin/com/example/dfsupport
           cp MainActivity.kt NotificationStore.kt DFNotificationListener.kt app/android/app/src/main/kotlin/com/example/dfsupport/
           rm -rf app/test
+          rm -f app/analysis_options.yaml
       - name: Get packages
         working-directory: app
         run: flutter pub get
